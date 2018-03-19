@@ -1,7 +1,7 @@
 /**
  * Author            : wangguo <wangguo@didichuxing.com>
  * Date              : 18.03.2018
- * Last Modified Date: 19.03.2018
+ * Last Modified Date: 20.03.2018
  */
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -10,27 +10,49 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <netinet/in.h>
+#include <string.h>
+#include <iostream>
 
 void* server_handler(void* req){
     int* ret = new int(0);
     int recv_fd = *((int*)req);
+    std::cout<<"handle recv_fd:"<<recv_fd<<std::endl;
     char buffer[1024];
-    int read_len = read(recv_fd, buffer, sizeof(buffer));
-    if (read_len < 1) {
+    int read_ret = read(recv_fd, buffer, sizeof(buffer));
+    int read_len = read_ret;
+    while(read_ret > 0){
+        read_ret = read(recv_fd, buffer+read_len, sizeof(buffer)-read_len);
+        if (read_ret <= 0){
+            break;
+        }
+        read_len+=read_ret;
+        printf("read recv_fd:%d len:%d\n total:%d\n", recv_fd, read_ret, read_len);
+    }
+    printf("received len:%d content:{%s}\n", read_len, buffer);
+    char res_buffer[1024];
+    int res_len = snprintf(res_buffer, sizeof(res_buffer), "received len:%d", read_len);
+    int write_len = write(recv_fd,res_buffer,res_len);
+    if (write_len < 1){
+        printf("write recv_fd:%d failed\n", recv_fd);
         *ret = -1;
-        printf("received len:%d content:%s\n", read_len, buffer);
         return ret;
     }
+    printf("write len:%d content:%s\n", write_len, res_buffer);
     return ret; //TODO how ensure exit without pthread_join
 }
-int handle_req(int  recv_fd){
+int handle_req(int recv_fd){
     pthread_t thrd;
     //struct pthread_attr_t attr;
-    int ret = pthread_create(&thrd, NULL, server_handler, (void*)recv_fd);
+    int* arg = new int(recv_fd);//TODO delete
+    int ret = pthread_create(&thrd, NULL, server_handler, (void*)arg);
     if (0 != ret){
-        printf("new thread failed ret:%d",ret);
+        delete arg;
+        printf("new thread failed ret:%d\n",ret);
         return -1;
     }
+    //delete arg;
+    //printf("join thread:%d\n", thrd);
+    //pthread_join(thrd, NULL);
     return 0;
 }
 int start_server(int port){
@@ -40,6 +62,7 @@ int start_server(int port){
         return -1;
     }
     struct sockaddr_in addr;
+    memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(port);
@@ -48,21 +71,27 @@ int start_server(int port){
         printf("bind failed:%d\n", ret);
         return -2;
     }
+    printf("bind port:%d ok\n", port);
     ret=listen(socket_fd, 0);
     if(ret!=0){
         printf("listen failed:%d\n", ret);
         return -3;
     }
+    printf("listen ok. fd:%d\n", socket_fd);
+    int conn_count = 0;
     while(true) {
         struct sockaddr_in peer_addr;
         socklen_t peer_addr_len = sizeof(peer_addr);
+        printf("accepting\n");
         int recv_fd = accept(socket_fd, (struct sockaddr*)&peer_addr, &peer_addr_len);//NOTE will block, how to nonblock?
-        if (-1 == recv_fd){
-            ret = handle_req(socket_fd);
+        printf("accepted id:%d recv_fd:%d\n", conn_count++, recv_fd);
+        if (-1 != recv_fd){
+            ret = handle_req(recv_fd);
             if (ret != 0){
                 printf("handler request failed for socket_fd:%d ret:%d\n", socket_fd, ret);
                 return -1;
             }
+            std::cout<<"handle done recv_fd:"<<recv_fd<<std::endl;
         }
     }
     return 0;

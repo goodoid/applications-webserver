@@ -1,5 +1,6 @@
+output="day2"
 all:
-	g++ -g -Wall -o day1 src/server/server.cpp \
+	g++ -g -Wall -o $(output) src/server/server.cpp \
 		-lpthread
 		#-lsocket \
 
