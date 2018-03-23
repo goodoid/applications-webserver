@@ -1,6 +1,6 @@
 /**
- * Author            : wangguo <wangguo@didichuxing.com>
- * Date              : 18.03.2018
+ * Author            : wangguo
+ * Date              : 23.03.2018
  * Last Modified Date: 23.03.2018
  */
 #include <sys/socket.h>
