@@ -1,7 +1,7 @@
 /**
  * Author            : wangguo <wangguo@didichuxing.com>
  * Date              : 18.03.2018
- * Last Modified Date: 20.03.2018
+ * Last Modified Date: 23.03.2018
  */
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -20,24 +20,28 @@ void* server_handler(void* req){
     char buffer[1024];
     int read_ret = read(recv_fd, buffer, sizeof(buffer));
     int read_len = read_ret;
-    while(read_ret > 0){
-        read_ret = read(recv_fd, buffer+read_len, sizeof(buffer)-read_len);
-        if (read_ret <= 0){
-            break;
-        }
-        read_len+=read_ret;
-        printf("read recv_fd:%d len:%d\n total:%d\n", recv_fd, read_ret, read_len);
-    }
-    printf("received len:%d content:{%s}\n", read_len, buffer);
+    //while(read_ret > 0){
+    //    read_ret = read(recv_fd, buffer+read_len, sizeof(buffer)-read_len);
+    //    if (read_ret <= 0){
+    //        std::cout<<"read empty"<<std::endl;
+    //        break;
+    //    }
+    //    read_len+=read_ret;
+    //    std::cout<<"read recv_fd:"<<recv_fd<<"len:"<<read_ret<<"total:"<<read_len<<std::endl;
+    //}
+    //int http_handler(req_buffer, req_len, res_buffer, res_len);
+    std::cout<<"received len:"<<read_len<<"content:\n{"<<buffer<<"}\n"<<std::endl;
     char res_buffer[1024];
-    int res_len = snprintf(res_buffer, sizeof(res_buffer), "received len:%d", read_len);
+    char content_buffer[2048];
+    int content_len = snprintf(content_buffer, sizeof(content_buffer), "hello from goodriod\n");
+    int res_len = snprintf(res_buffer, sizeof(res_buffer), "HTTP/1.1 200 OK\nServer: Apache\nVary: Accept-Encoding\nContent-Length: %d\n\n%s", content_len, content_buffer);
     int write_len = write(recv_fd,res_buffer,res_len);
-    if (write_len < 1){
+    if (write_len != res_len){
         printf("write recv_fd:%d failed\n", recv_fd);
         *ret = -1;
         return ret;
     }
-    printf("write len:%d content:%s\n", write_len, res_buffer);
+    std::cout<<"write len:"<<write_len<<"content:{"<<res_buffer<<"}"<<std::endl;
     return ret; //TODO how ensure exit without pthread_join
 }
 int handle_req(int recv_fd){
