@@ -1,7 +1,7 @@
 /**
  * Author            : wangguo
  * Date              : 23.03.2018
- * Last Modified Date: 23.03.2018
+ * Last Modified Date: 02.04.2018
  */
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -41,6 +41,7 @@ void* server_handler(void* req){
         *ret = -1;
         return ret;
     }
+    close(recv_fd);
     std::cout<<"write len:"<<write_len<<"content:{"<<res_buffer<<"}"<<std::endl;
     return ret; //TODO how ensure exit without pthread_join
 }
@@ -65,6 +66,12 @@ int start_server(int port){
         printf("new socket failed:%d\n", socket_fd);
         return -1;
     }
+    struct linger linger_opt;
+    linger_opt.l_onoff = 1;
+    linger_opt.l_linger = 3;
+    int socket_opt_reuseport = 1;
+    setsockopt(socket_fd, SOL_SOCKET, SO_LINGER,(void*)&linger_opt, sizeof(linger_opt));
+    setsockopt(socket_fd, SOL_SOCKET, SO_REUSEPORT, (void*)&socket_opt_reuseport, sizeof(socket_opt_reuseport));
     struct sockaddr_in addr;
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
